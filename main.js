@@ -24,9 +24,7 @@
   projeto.
   */
 
-console.log(
-  'Link do seu projeto no seu github de forma privada, adicionando aristotelesFerreira'
-);
+  console.log('https://github.com/gstimm/desafio-30-js-ninja/pull/1');
 
   const app = (() => {
     return {
