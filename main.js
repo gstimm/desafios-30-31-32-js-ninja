@@ -2,21 +2,39 @@
   'use strict';
 
   /*
-  Agora vamos criar a funcionalidade de "remover" um carro. Adicione uma nova
-  coluna na tabela, com um botão de remover.
-  Ao clicar nesse botão, a linha da tabela deve ser removida.
-  Faça um pull request no seu repositório, na branch `challenge-31`, e cole
-  o link do pull request no `console.log` abaixo.
-  Faça um pull request, também com a branch `challenge-31`, mas no repositório
-  do curso, para colar o link do pull request do seu repo.
+  Já temos as funcionalidades de adicionar e remover um carro. Agora, vamos persistir esses dados, 
+  salvando-os temporariamente na memória de um servidor.
+  Nesse diretório do `challenge-32` tem uma pasta `server`. É um servidor simples, em NodeJS, para 
+  que possamos utilizar para salvar as informações dos nossos carros.
+  Para utilizá-lo, você vai precisar fazer o seguinte:
+  - Via terminal, acesse o diretório `server`;
+  - execute o comando `npm install` para instalar as dependências;
+  - execute `node app.js` para iniciar o servidor.
+  Ele irá ser executado na porta 3000, que pode ser acessada via browser no endereço: 
+  `http://localhost:3000`
+  O seu projeto não precisa estar rodando junto com o servidor. Ele pode estar em outra porta.
+  As mudanças que você irá precisar fazer no seu projeto são:
+  - Para listar os carros cadastrados ao carregar o seu projeto, faça um request GET no endereço
+  `http://localhost:3000/car`
+  - Para cadastrar um novo carro, faça um POST no endereço `http://localhost:3000/car`, enviando
+  os seguintes campos:
+    - `image` com a URL da imagem do carro;
+    - `brandModel`, com a marca e modelo do carro;
+    - `year`, com o ano do carro;
+    - `plate`, com a placa do carro;
+    - `color`, com a cor do carro.
+  Após enviar o POST, faça um GET no `server` e atualize a tabela para mostrar o novo carro cadastrado.
+  Crie uma branch `challenge-32` no seu projeto, envie um pull request lá e cole nesse arquivo a URL
+  do pull request.
   */
 
-  console.log('https://github.com/gstimm/desafio-30-js-ninja/pull/3');
+  console.log('https://github.com/gstimm/desafio-30-js-ninja/pull/4');
 
   const app = (() => {
     return {
       init: function () {
         this.companyInfo();
+        this.getCars();
         this.initEvents();
       },
 
@@ -26,52 +44,48 @@
 
       handleSubmit: function (e) {
         e.preventDefault();
-        const $tableCar = DOM('[data-js="table-car"]').get();
-        $tableCar.appendChild(app.createNewCar());
+        app.postCar();
       },
 
-      createNewCar: function () {
-        const $input = DOM('input');
-
-        this.hasEmptyInputs($input);
-
-        const $fragment = document.createDocumentFragment();
+      createNewCar: function (car) {
         const $tr = document.createElement('tr');
         const $tdImage = document.createElement('td');
         const $tdModel = document.createElement('td');
         const $tdYear = document.createElement('td');
         const $tdPlate = document.createElement('td');
         const $tdColor = document.createElement('td') ;
-        const $tdDelete = document.createElement('td');
         const $image = document.createElement('img');
-        const $deleteButton = document.createElement('button');
+        
+        $image.src = car.image;
+        $tdModel.textContent = car.model;
+        $tdYear.textContent = car.year;
+        $tdPlate.textContent = car.plate;
+        $tdColor.textContent = car.color;
 
-        $image.src = DOM('[data-js="car-image"]').get().value;
-        $tdModel.textContent = DOM('[data-js="car-model"]').get().value;
-        $tdYear.textContent = DOM('[data-js="car-year"]').get().value;
-        $tdPlate.textContent = DOM('[data-js="car-plate"]').get().value;
-        $tdColor.textContent = DOM('[data-js="car-color"]').get().value;
-        $deleteButton.textContent = 'X';
-
-        $tdDelete.appendChild($deleteButton);
         $tdImage.appendChild($image);
         $tr.appendChild($tdImage);
         $tr.appendChild($tdModel);
         $tr.appendChild($tdYear);
         $tr.appendChild($tdPlate);
         $tr.appendChild($tdColor);
-        $tr.appendChild($tdDelete);
-        
-        $deleteButton.addEventListener('click', this.removeCar, false);
+        $tr.appendChild(this.removeCarButton());
 
-        this.clearInput($input);
-
-        return $fragment.appendChild($tr);
+        return $tr;
       },
 
-      removeCar: function () {
-        const carIndex = this.parentNode.parentNode.rowIndex;
-        document.querySelector('table').deleteRow(carIndex);
+      removeCarButton: function () {
+        const $tdDelete = document.createElement('td');
+        const $deleteButton = document.createElement('button');
+        
+        $deleteButton.textContent = 'X';
+        $tdDelete.appendChild($deleteButton);
+
+        $deleteButton.addEventListener('click', () => {
+          const row = $tdDelete.parentNode;
+          row.parentNode.removeChild(row);
+        }, false)
+
+        return $tdDelete;
       },
 
       companyInfo: function () {
@@ -108,6 +122,58 @@
           }
         })
       },
+
+      getCars: function() {
+        const $tableCar = DOM('[data-js="table-car"]').get();
+        const $fragment = document.createDocumentFragment();
+        const ajax = new XMLHttpRequest();
+        
+        ajax.open('GET', 'http://localhost:3000/car');
+        ajax.send();
+        ajax.onreadystatechange = function() {
+          if (ajax.readyState === 4) {
+            console.log('Carros Listados:', JSON.parse(ajax.responseText).length);
+
+            Array.prototype.forEach.call(JSON.parse(ajax.responseText), car => {
+              console.log(JSON.parse(ajax.responseText));
+              console.log(car.model);
+              $fragment.appendChild(app.createNewCar(car));
+            })
+            $tableCar.appendChild($fragment);
+          }
+        }
+      },
+
+      postCar: function() {
+        const ajax = new XMLHttpRequest();
+
+        const car = {
+          image: DOM('[data-js="car-image"]').get().value,
+          model: DOM('[data-js="car-model"]').get().value,
+          year: DOM('[data-js="car-year"]').get().value,
+          plate: DOM('[data-js="car-plate"]').get().value,
+          color: DOM('[data-js="car-color"]').get().value,
+        };
+
+        const $input = DOM('input');
+        this.hasEmptyInputs($input);
+
+        this.clearInput($input);
+
+        ajax.open('POST', 'http://localhost:3000/car');
+        ajax.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        ajax.send(
+          `image=${car.image}&model=${car.model}&year=${car.year}&plate=${car.plate}&color=${car.color}`
+        );
+
+        ajax.onreadystatechange = function() {
+          if(ajax.readyState === 4) {
+            console.log('Carro cadastrado: ', ajax.responseText);
+          }
+        }
+
+        window.location.reload();
+      }
     }
   })();
 
